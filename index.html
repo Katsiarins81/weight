@@ -59,26 +59,6 @@
             font-size: 0.9rem;
         }
 
-        .status-bar {
-            background: #fff0f4;
-            border-radius: 30px;
-            padding: 8px 16px;
-            margin-bottom: 16px;
-            text-align: center;
-            font-size: 0.8rem;
-            color: #bc5f7a;
-        }
-        
-        .status-bar.online {
-            background: #e6f4ea;
-            color: #2e7d32;
-        }
-        
-        .status-bar.offline {
-            background: #fce4e4;
-            color: #c62828;
-        }
-
         .person-selector {
             background: #fff0f4;
             border-radius: 60px;
@@ -215,7 +195,6 @@
         }
 
         .save-weight-btn:active { transform: scale(0.97); }
-        .save-weight-btn.loading { opacity: 0.6; pointer-events: none; }
 
         .history-section {
             background: #ffffffd9;
@@ -347,6 +326,26 @@
             padding: 5px;
             color: #bc5f7a;
         }
+        
+        .status-bar {
+            background: #fff0f4;
+            border-radius: 30px;
+            padding: 8px 16px;
+            margin-bottom: 16px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #bc5f7a;
+        }
+        
+        .status-bar.online {
+            background: #e6f4ea;
+            color: #2e7d32;
+        }
+        
+        .status-bar.offline {
+            background: #fce4e4;
+            color: #c62828;
+        }
     </style>
 </head>
 <body>
@@ -405,7 +404,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     // ============================================================
-    // ⭐ НАСТРОЙКА SUPABASE - ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ! ⭐
+    // НАСТРОЙКА SUPABASE - ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ!
     // ============================================================
     const SUPABASE_URL = "https://ВАШ_ПРОЕКТ.supabase.co";
     const SUPABASE_ANON_KEY = "ВАШ_ANON_KEY";
@@ -414,24 +413,32 @@
     let supabase = null;
     let currentPerson = "tanya";
     let currentDate = new Date().toISOString().slice(0,10);
+    let isSupabaseReady = false;
 
-    function initSupabase() {
+    // Инициализация Supabase
+    async function initSupabase() {
         try {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            // Проверяем подключение
+            const { error } = await supabase.from('weight_records').select('id', { count: 'exact', head: true });
+            if (error) throw error;
+            isSupabaseReady = true;
             updateStatusBar(true, "✅ Подключено к Supabase");
             return true;
         } catch(e) {
-            updateStatusBar(false, "❌ Ошибка подключения к Supabase");
+            console.error(e);
+            updateStatusBar(false, "❌ Ошибка подключения к Supabase. Проверьте настройки.");
             return false;
         }
     }
-
+    
     function updateStatusBar(isOnline, message) {
         const bar = document.getElementById('statusBar');
         bar.textContent = message;
         bar.className = isOnline ? 'status-bar online' : 'status-bar offline';
     }
 
+    // ===================== ФУНКЦИИ РАБОТЫ С SUPABASE =====================
     async function getAllEntries() {
         if (!supabase) return [];
         const { data, error } = await supabase
@@ -463,13 +470,19 @@
 
     async function deleteEntryById(id) {
         if (!supabase) throw new Error("Supabase не инициализирован");
-        const { error } = await supabase.from('weight_records').delete().eq('id', id);
+        const { error } = await supabase
+            .from('weight_records')
+            .delete()
+            .eq('id', id);
         if (error) throw error;
     }
 
     async function deleteAllEntries() {
         if (!supabase) throw new Error("Supabase не инициализирован");
-        const { error } = await supabase.from('weight_records').delete().neq('id', 0);
+        const { error } = await supabase
+            .from('weight_records')
+            .delete()
+            .neq('id', 0);
         if (error) throw error;
     }
 
@@ -510,7 +523,9 @@
         return { tanyaMap, katyaMap };
     }
 
+    // Рендер таблицы
     async function renderHistoryTable() {
+        if (!isSupabaseReady) return;
         try {
             const allRecords = await getAllEntries();
             const uniqueDatesSet = new Set();
@@ -609,20 +624,20 @@
                 });
             });
         } catch(e) {
-            console.error(e);
+            console.error("Ошибка рендера таблицы", e);
         }
     }
-
+    
+    // Сохранить вес
     async function saveCurrentWeight() {
-        if (!supabase) {
-            alert("База данных не подключена");
+        if (!isSupabaseReady) {
+            alert("База данных не подключена. Проверьте настройки Supabase.");
             return;
         }
-        
         const weightInput = document.getElementById('weightInput');
         let weightVal = weightInput.value.trim();
         if (weightVal === "") {
-            alert("Введите вес");
+            alert("Введите вес (например: 54.5)");
             return;
         }
         let weightNumber = parseFloat(weightVal);
@@ -632,19 +647,19 @@
         }
         
         const saveBtn = document.getElementById('saveWeightBtn');
-        saveBtn.classList.add('loading');
         const originalText = saveBtn.innerText;
         saveBtn.innerText = '⏳ Сохранение...';
+        saveBtn.disabled = true;
         
         try {
             const existing = await checkExistingRecord(currentPerson, currentDate);
             if (existing) {
-                const replace = confirm(`Запись за ${currentDate} уже существует (${existing.weight} кг). Заменить?`);
+                const replace = confirm(`Запись за ${currentDate} для ${currentPerson === 'tanya' ? 'Танюшки 🎀' : 'Катюшки 🌸'} уже существует (${existing.weight} кг). Заменить новым весом?`);
                 if (replace) {
                     await deleteEntryById(existing.id);
                 } else {
-                    saveBtn.classList.remove('loading');
                     saveBtn.innerText = originalText;
+                    saveBtn.disabled = false;
                     return;
                 }
             }
@@ -653,35 +668,40 @@
             document.getElementById('weightInput').value = '';
             await renderHistoryTable();
             saveBtn.innerText = '✅ Сохранено!';
-            setTimeout(() => { saveBtn.innerText = originalText; saveBtn.classList.remove('loading'); }, 1200);
+            setTimeout(() => { saveBtn.innerText = originalText; saveBtn.disabled = false; }, 1200);
         } catch (err) {
-            alert("Ошибка: " + err.message);
+            alert("Ошибка сохранения: " + err.message);
             saveBtn.innerText = originalText;
-            saveBtn.classList.remove('loading');
+            saveBtn.disabled = false;
         }
     }
-
+    
+    // Сбросить все данные
     async function resetAllData() {
-        if (!supabase) return;
-        const confirmReset = confirm("Удалить ВСЕ записи?");
+        if (!isSupabaseReady) return;
+        const confirmReset = confirm("ВНИМАНИЕ! Это удалит ВСЕ записи о весе из облака. Отменить нельзя. Продолжить?");
         if (!confirmReset) return;
+        
+        const resetBtn = document.getElementById('resetAllDataBtn');
+        resetBtn.disabled = true;
+        
         try {
             await deleteAllEntries();
             await renderHistoryTable();
             alert("✨ Вся история очищена ✨");
         } catch(e) {
-            alert("Ошибка: " + e.message);
+            alert("Ошибка очистки: " + e.message);
+        } finally {
+            resetBtn.disabled = false;
         }
     }
-
-    // ⭐ ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ПЕРСОНЫ - ЦЕНТРАЛЬНАЯ НАДПИСЬ МЕНЯЕТСЯ! ⭐
+    
+    // ========== ПЕРЕКЛЮЧЕНИЕ ПЕРСОНЫ (ВАША ОРИГИНАЛЬНАЯ ФУНКЦИЯ) ==========
     function setActivePerson(person) {
         currentPerson = person;
-        
         const tanyaBtn = document.getElementById('selectTanyaBtn');
         const katyaBtn = document.getElementById('selectKatyaBtn');
         const personNameSpan = document.getElementById('selectedPersonName');
-        
         if (person === 'tanya') {
             tanyaBtn.classList.add('active');
             katyaBtn.classList.remove('active');
@@ -693,21 +713,27 @@
             personNameSpan.innerHTML = '🌸 Катюшка';
             personNameSpan.className = 'selected-person-name katya-label';
         }
+        console.log('Переключено на', person); // Для проверки
     }
-
+    
     function initDatePicker() {
         const dateInput = document.getElementById('recordDate');
         dateInput.value = currentDate;
-        dateInput.addEventListener('change', (e) => { currentDate = e.target.value; });
-        document.getElementById('todayWeightBtn').addEventListener('click', () => {
+        dateInput.addEventListener('change', (e) => {
+            currentDate = e.target.value;
+        });
+        const todayBtn = document.getElementById('todayWeightBtn');
+        todayBtn.addEventListener('click', () => {
             const today = new Date().toISOString().slice(0,10);
             currentDate = today;
             dateInput.value = currentDate;
         });
     }
-
+    
     async function initApp() {
-        if (!initSupabase()) return;
+        const connected = await initSupabase();
+        if (!connected) return;
+        
         await renderHistoryTable();
         initDatePicker();
         setActivePerson('tanya');
@@ -717,7 +743,8 @@
         document.getElementById('saveWeightBtn').addEventListener('click', saveCurrentWeight);
         document.getElementById('resetAllDataBtn').addEventListener('click', resetAllData);
         
-        document.getElementById('weightInput').addEventListener('keypress', (e) => {
+        const weightInput = document.getElementById('weightInput');
+        weightInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') saveCurrentWeight();
         });
     }
