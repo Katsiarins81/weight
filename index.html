@@ -59,7 +59,26 @@
             font-size: 0.9rem;
         }
 
-        /* выбор персоны */
+        .status-bar {
+            background: #fff0f4;
+            border-radius: 30px;
+            padding: 8px 16px;
+            margin-bottom: 16px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #bc5f7a;
+        }
+        
+        .status-bar.online {
+            background: #e6f4ea;
+            color: #2e7d32;
+        }
+        
+        .status-bar.offline {
+            background: #fce4e4;
+            color: #c62828;
+        }
+
         .person-selector {
             background: #fff0f4;
             border-radius: 60px;
@@ -90,7 +109,6 @@
             box-shadow: 0 6px 12px #f7aec4;
         }
 
-        /* карточка ввода веса */
         .weight-card {
             background: white;
             border-radius: 36px;
@@ -197,8 +215,8 @@
         }
 
         .save-weight-btn:active { transform: scale(0.97); }
+        .save-weight-btn.loading { opacity: 0.6; pointer-events: none; }
 
-        /* таблица с динамикой */
         .history-section {
             background: #ffffffd9;
             border-radius: 32px;
@@ -272,19 +290,16 @@
             font-weight: 500;
         }
 
-        /* Прирост (плюс) — красный */
         .change-positive {
             background: #fce4e4;
             color: #c62828;
         }
 
-        /* Снижение (минус) — зелёный */
         .change-negative {
             background: #e6f4ea;
             color: #2e7d32;
         }
 
-        /* Ноль или первое измерение — нейтральный */
         .change-neutral {
             background: #fff0f0;
             color: #b86b82;
@@ -339,13 +354,13 @@
     <h1>Дневник веса</h1>
     <div class="sub">Танюшка 🎀 и Катюшка 🌸 — динамика изменений</div>
 
-    <!-- Выбор персоны -->
+    <div id="statusBar" class="status-bar">🔄 Подключение к Supabase...</div>
+
     <div class="person-selector">
-        <button id="selectTanyaBtn" class="person-btn">🎀 Танюшка</button>
+        <button id="selectTanyaBtn" class="person-btn active">🎀 Танюшка</button>
         <button id="selectKatyaBtn" class="person-btn">🌸 Катюшка</button>
     </div>
 
-    <!-- Блок ввода веса для выбранной персоны -->
     <div class="weight-card" id="weightCard">
         <div id="selectedPersonName" class="selected-person-name tanya-label">🎀 Танюшка</div>
         <div class="weight-input-area">
@@ -360,7 +375,6 @@
         <button id="saveWeightBtn" class="save-weight-btn">💾 Сохранить вес 💾</button>
     </div>
 
-    <!-- Таблица: два столбца для каждой персоны с динамикой -->
     <div class="history-section">
         <div class="history-header">
             <h3>📋 Динамика веса по дням</h3>
@@ -377,130 +391,93 @@
                     </tr>
                 </thead>
                 <tbody id="historyTableBody">
-                    <tr><td colspan="4" class="empty-history">📭 Нет записей. Добавьте первый вес!</td></tr>
+                    <tr><td colspan="4" class="empty-history">📭 Загрузка...</td></tr>
                 </tbody>
             </table>
         </div>
         <div class="subnote">
-            🟢 Зелёный — снижение веса (отлично!), 🔴 Красный — прирост веса. ⚪ Нейтральный — вес не изменился или первое измерение.
+            🟢 Зелёный — снижение веса (отлично!), 🔴 Красный — прирост веса.
         </div>
     </div>
-    <footer>💪 Фиксируйте вес каждый день — отслеживайте прогресс!</footer>
+    <footer>💪 Данные синхронизируются с облаком Supabase</footer>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // ----- Работа с IndexedDB -----
-    const DB_NAME = "WeightDynamicDB";
-    const DB_VERSION = 2;
-    const STORE_NAME = "weight_records";
+    // ============================================================
+    // ⭐ НАСТРОЙКА SUPABASE - ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ! ⭐
+    // ============================================================
+    const SUPABASE_URL = "https://ВАШ_ПРОЕКТ.supabase.co";
+    const SUPABASE_ANON_KEY = "ВАШ_ANON_KEY";
+    // ============================================================
 
-    let db = null;
-    let currentPerson = "tanya"; // 'tanya' or 'katya'
+    let supabase = null;
+    let currentPerson = "tanya";
     let currentDate = new Date().toISOString().slice(0,10);
 
-    // открытие БД
-    function openDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-            request.onerror = (e) => reject("Ошибка БД: " + e.target.error);
-            request.onsuccess = (e) => {
-                db = e.target.result;
-                resolve(db);
-            };
-            request.onupgradeneeded = (e) => {
-                const dbRef = e.target.result;
-                if (!dbRef.objectStoreNames.contains(STORE_NAME)) {
-                    const store = dbRef.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
-                    store.createIndex("by_date_person", ["date", "person"], { unique: false });
-                    store.createIndex("by_date", "date", { unique: false });
-                    store.createIndex("by_person_date", ["person", "date"], { unique: false });
-                } else {
-                    const store = e.target.transaction.objectStore(STORE_NAME);
-                    if (!store.indexNames.contains("by_person_date")) {
-                        store.createIndex("by_person_date", ["person", "date"], { unique: false });
-                    }
-                }
-            };
-        });
+    function initSupabase() {
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            updateStatusBar(true, "✅ Подключено к Supabase");
+            return true;
+        } catch(e) {
+            updateStatusBar(false, "❌ Ошибка подключения к Supabase");
+            return false;
+        }
     }
 
-    // Добавить запись о весе
-    async function addWeightEntry(person, date, weight) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject("db not ready");
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            const store = tx.objectStore(STORE_NAME);
-            const entry = {
-                person: person,
-                date: date,
-                weight: parseFloat(weight),
-                timestamp: Date.now()
-            };
-            const request = store.add(entry);
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
+    function updateStatusBar(isOnline, message) {
+        const bar = document.getElementById('statusBar');
+        bar.textContent = message;
+        bar.className = isOnline ? 'status-bar online' : 'status-bar offline';
     }
 
-    // Получить все записи
-    async function getAllEntriesSorted() {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject("db not ready");
-            const tx = db.transaction(STORE_NAME, "readonly");
-            const store = tx.objectStore(STORE_NAME);
-            const getAll = store.getAll();
-            getAll.onsuccess = () => {
-                let entries = getAll.result || [];
-                entries.sort((a,b) => b.date.localeCompare(a.date));
-                resolve(entries);
-            };
-            getAll.onerror = () => reject(getAll.error);
-        });
+    async function getAllEntries() {
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('weight_records')
+            .select('*')
+            .order('date', { ascending: false });
+        if (error) return [];
+        return data || [];
     }
 
-    // Получить все записи для персоны, отсортированные по дате (старые -> новые)
     async function getEntriesByPersonAsc(person) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject("db not ready");
-            const tx = db.transaction(STORE_NAME, "readonly");
-            const store = tx.objectStore(STORE_NAME);
-            const index = store.index("by_person_date");
-            const range = IDBKeyRange.bound([person, "0000-01-01"], [person, "9999-12-31"]);
-            const request = index.getAll(range);
-            request.onsuccess = () => {
-                let entries = request.result || [];
-                entries.sort((a,b) => a.date.localeCompare(b.date));
-                resolve(entries);
-            };
-            request.onerror = () => reject(request.error);
-        });
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('weight_records')
+            .select('*')
+            .eq('person', person)
+            .order('date', { ascending: true });
+        if (error) return [];
+        return data || [];
     }
 
-    // Удалить запись по id
+    async function addWeightEntry(person, date, weight) {
+        if (!supabase) throw new Error("Supabase не инициализирован");
+        const { error } = await supabase
+            .from('weight_records')
+            .insert([{ person, date, weight: parseFloat(weight) }]);
+        if (error) throw error;
+    }
+
     async function deleteEntryById(id) {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject("db not ready");
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.delete(id);
-            req.onsuccess = () => resolve(true);
-            req.onerror = () => reject(req.error);
-        });
+        if (!supabase) throw new Error("Supabase не инициализирован");
+        const { error } = await supabase.from('weight_records').delete().eq('id', id);
+        if (error) throw error;
     }
 
-    // Удалить ВСЕ записи
     async function deleteAllEntries() {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject("db not ready");
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            const store = tx.objectStore(STORE_NAME);
-            const req = store.clear();
-            req.onsuccess = () => resolve(true);
-            req.onerror = () => reject(req.error);
-        });
+        if (!supabase) throw new Error("Supabase не инициализирован");
+        const { error } = await supabase.from('weight_records').delete().neq('id', 0);
+        if (error) throw error;
     }
 
-    // Построение карты изменений для персон
+    async function checkExistingRecord(person, date) {
+        const entries = await getEntriesByPersonAsc(person);
+        return entries.find(entry => entry.date === date) || null;
+    }
+
     async function getWeightChangeMap() {
         const tanyaEntries = await getEntriesByPersonAsc("tanya");
         const katyaEntries = await getEntriesByPersonAsc("katya");
@@ -533,11 +510,9 @@
         return { tanyaMap, katyaMap };
     }
 
-    // Рендер таблицы
     async function renderHistoryTable() {
-        if (!db) return;
         try {
-            const allRecords = await getAllEntriesSorted();
+            const allRecords = await getAllEntries();
             const uniqueDatesSet = new Set();
             allRecords.forEach(rec => uniqueDatesSet.add(rec.date));
             let sortedDates = Array.from(uniqueDatesSet).sort((a,b) => b.localeCompare(a));
@@ -619,16 +594,14 @@
                 `;
             }
             
-            const tbody = document.getElementById('historyTableBody');
-            tbody.innerHTML = html;
+            document.getElementById('historyTableBody').innerHTML = html;
             
             document.querySelectorAll('.delete-entry').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    const dateToDelete = btn.getAttribute('data-date');
                     const tanyaId = btn.getAttribute('data-tanya-id');
                     const katyaId = btn.getAttribute('data-katya-id');
-                    if (confirm(`Удалить все записи за ${dateToDelete}?`)) {
+                    if (confirm(`Удалить запись?`)) {
                         if (tanyaId && tanyaId !== '') await deleteEntryById(Number(tanyaId));
                         if (katyaId && katyaId !== '') await deleteEntryById(Number(katyaId));
                         await renderHistoryTable();
@@ -636,26 +609,20 @@
                 });
             });
         } catch(e) {
-            console.error("Ошибка рендера таблицы", e);
+            console.error(e);
         }
     }
-    
-    // Проверка существующей записи
-    async function checkExistingRecord(person, date) {
-        const entries = await getEntriesByPersonAsc(person);
-        return entries.find(entry => entry.date === date) || null;
-    }
-    
-    // Сохранить вес
+
     async function saveCurrentWeight() {
-        if (!db) {
-            alert("База данных загружается, попробуйте через секунду");
+        if (!supabase) {
+            alert("База данных не подключена");
             return;
         }
+        
         const weightInput = document.getElementById('weightInput');
         let weightVal = weightInput.value.trim();
         if (weightVal === "") {
-            alert("Введите вес (например: 54.5)");
+            alert("Введите вес");
             return;
         }
         let weightNumber = parseFloat(weightVal);
@@ -664,49 +631,57 @@
             return;
         }
         
-        const existing = await checkExistingRecord(currentPerson, currentDate);
-        if (existing) {
-            const replace = confirm(`Запись за ${currentDate} для ${currentPerson === 'tanya' ? 'Танюшки 🎀' : 'Катюшки 🌸'} уже существует (${existing.weight} кг). Заменить новым весом?`);
-            if (replace) {
-                await deleteEntryById(existing.id);
-            } else {
-                return;
-            }
-        }
+        const saveBtn = document.getElementById('saveWeightBtn');
+        saveBtn.classList.add('loading');
+        const originalText = saveBtn.innerText;
+        saveBtn.innerText = '⏳ Сохранение...';
         
         try {
+            const existing = await checkExistingRecord(currentPerson, currentDate);
+            if (existing) {
+                const replace = confirm(`Запись за ${currentDate} уже существует (${existing.weight} кг). Заменить?`);
+                if (replace) {
+                    await deleteEntryById(existing.id);
+                } else {
+                    saveBtn.classList.remove('loading');
+                    saveBtn.innerText = originalText;
+                    return;
+                }
+            }
+            
             await addWeightEntry(currentPerson, currentDate, weightNumber);
             document.getElementById('weightInput').value = '';
             await renderHistoryTable();
-            const saveBtn = document.getElementById('saveWeightBtn');
-            const originalText = saveBtn.innerText;
             saveBtn.innerText = '✅ Сохранено!';
-            setTimeout(() => { saveBtn.innerText = originalText; }, 1200);
+            setTimeout(() => { saveBtn.innerText = originalText; saveBtn.classList.remove('loading'); }, 1200);
         } catch (err) {
-            alert("Ошибка сохранения: " + err.message);
+            alert("Ошибка: " + err.message);
+            saveBtn.innerText = originalText;
+            saveBtn.classList.remove('loading');
         }
     }
-    
-    // Сбросить все данные
+
     async function resetAllData() {
-        if (!db) return;
-        const confirmReset = confirm("ВНИМАНИЕ! Это удалит ВСЕ записи о весе. Отменить нельзя. Продолжить?");
+        if (!supabase) return;
+        const confirmReset = confirm("Удалить ВСЕ записи?");
         if (!confirmReset) return;
         try {
             await deleteAllEntries();
             await renderHistoryTable();
             alert("✨ Вся история очищена ✨");
         } catch(e) {
-            alert("Ошибка очистки: " + e.message);
+            alert("Ошибка: " + e.message);
         }
     }
-    
-    // UI для выбора персоны
+
+    // ⭐ ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ПЕРСОНЫ - ЦЕНТРАЛЬНАЯ НАДПИСЬ МЕНЯЕТСЯ! ⭐
     function setActivePerson(person) {
         currentPerson = person;
+        
         const tanyaBtn = document.getElementById('selectTanyaBtn');
         const katyaBtn = document.getElementById('selectKatyaBtn');
         const personNameSpan = document.getElementById('selectedPersonName');
+        
         if (person === 'tanya') {
             tanyaBtn.classList.add('active');
             katyaBtn.classList.remove('active');
@@ -719,42 +694,32 @@
             personNameSpan.className = 'selected-person-name katya-label';
         }
     }
-    
-    // инициализация даты
+
     function initDatePicker() {
         const dateInput = document.getElementById('recordDate');
         dateInput.value = currentDate;
-        dateInput.addEventListener('change', (e) => {
-            currentDate = e.target.value;
-        });
-        const todayBtn = document.getElementById('todayWeightBtn');
-        todayBtn.addEventListener('click', () => {
+        dateInput.addEventListener('change', (e) => { currentDate = e.target.value; });
+        document.getElementById('todayWeightBtn').addEventListener('click', () => {
             const today = new Date().toISOString().slice(0,10);
             currentDate = today;
             dateInput.value = currentDate;
         });
     }
-    
+
     async function initApp() {
-        try {
-            await openDB();
-            await renderHistoryTable();
-            initDatePicker();
-            setActivePerson('tanya');
-            
-            document.getElementById('selectTanyaBtn').addEventListener('click', () => setActivePerson('tanya'));
-            document.getElementById('selectKatyaBtn').addEventListener('click', () => setActivePerson('katya'));
-            document.getElementById('saveWeightBtn').addEventListener('click', saveCurrentWeight);
-            document.getElementById('resetAllDataBtn').addEventListener('click', resetAllData);
-            
-            const weightInput = document.getElementById('weightInput');
-            weightInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') saveCurrentWeight();
-            });
-        } catch(err) {
-            console.error(err);
-            document.getElementById('appRoot').innerHTML += "<div style='color:red;padding:12px;background:#ffe2ea;border-radius:28px;margin-top:16px;'>⚠️ Ошибка инициализации базы данных</div>";
-        }
+        if (!initSupabase()) return;
+        await renderHistoryTable();
+        initDatePicker();
+        setActivePerson('tanya');
+        
+        document.getElementById('selectTanyaBtn').addEventListener('click', () => setActivePerson('tanya'));
+        document.getElementById('selectKatyaBtn').addEventListener('click', () => setActivePerson('katya'));
+        document.getElementById('saveWeightBtn').addEventListener('click', saveCurrentWeight);
+        document.getElementById('resetAllDataBtn').addEventListener('click', resetAllData);
+        
+        document.getElementById('weightInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') saveCurrentWeight();
+        });
     }
     
     window.addEventListener('DOMContentLoaded', initApp);
