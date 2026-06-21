@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Дневник веса: Танюшка и Катюшка</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23e86b8b' d='M50,30 C50,15 35,5 20,15 C5,25 5,45 20,55 L50,85 L80,55 C95,45 95,25 80,15 C65,5 50,15 50,30Z'/%3E%3C/svg%3E">
-    <!-- Ссылка на файл манифеста -->
-  <link rel="manifest" href="/manifest.json">
-  <!-- Иконка для устройств Apple (iOS) -->
-  <link rel="apple-touch-icon" href="/icons/icon-180x180.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-180x180.png">
     <style>
         * {
             margin: 0;
@@ -62,7 +60,7 @@
         .person-buttons {
             display: flex;
             gap: 12px;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
         .person-btn {
             flex: 1;
@@ -80,6 +78,118 @@
             background: #ff8aab;
             color: white;
         }
+
+        /* Блок общей динамики */
+        .total-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            flex: 1;
+            min-width: 120px;
+            background: white;
+            border-radius: 20px;
+            padding: 14px 16px;
+            text-align: center;
+            border: 1px solid #ffe2ea;
+            box-shadow: 0 2px 8px rgba(236, 120, 144, 0.1);
+        }
+        .stat-item .name {
+            font-size: 0.8rem;
+            color: #bc5f7a;
+            font-weight: 600;
+        }
+        .stat-item .value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        .stat-item .value.positive {
+            color: #c62828;
+        }
+        .stat-item .value.negative {
+            color: #2e7d32;
+        }
+        .stat-item .value.zero {
+            color: #b86b82;
+        }
+        .stat-item .sub-text {
+            font-size: 0.65rem;
+            color: #e6a1b7;
+            margin-top: 2px;
+        }
+
+        /* Выбор диапазона */
+        .range-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .range-btn {
+            background: white;
+            border: 1px solid #ffcddc;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #bc5f7a;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .range-btn.active {
+            background: #ff8aab;
+            color: white;
+            border-color: #ff8aab;
+        }
+        .range-btn:hover {
+            background: #ffe0e8;
+        }
+        .range-btn.active:hover {
+            background: #ff8aab;
+        }
+
+        /* Пользовательский выбор дат */
+        .custom-range {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            padding: 10px 16px;
+            background: #fff5f8;
+            border-radius: 60px;
+        }
+        .custom-range label {
+            font-size: 0.85rem;
+            color: #bc5f7a;
+            font-weight: 500;
+        }
+        .custom-range input[type="date"] {
+            padding: 6px 10px;
+            border-radius: 30px;
+            border: 1px solid #ffcddc;
+            background: white;
+            font-size: 0.85rem;
+        }
+        .custom-range .apply-btn {
+            background: #ff94b0;
+            border: none;
+            padding: 6px 20px;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .custom-range .apply-btn:hover {
+            background: #e86b8b;
+        }
+
         .weight-card {
             background: white;
             border-radius: 36px;
@@ -129,10 +239,10 @@
             cursor: pointer;
         }
         input#dateInput {
-    padding: 8px 5px;
-    border-radius: 56px;
-    border: 2px solid #ffcddc
-}
+            padding: 8px 5px;
+            border-radius: 56px;
+            border: 2px solid #ffcddc;
+        }
         .save-btn {
             background: linear-gradient(95deg, #ff8aab, #ff6085);
             border: none;
@@ -157,6 +267,8 @@
             justify-content: space-between;
             align-items: baseline;
             margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .reset-btn {
             background: none;
@@ -196,6 +308,35 @@
             font-size: 0.7rem;
             color: #e6a1b7;
         }
+        .range-info {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #e6a1b7;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 480px) {
+           
+            .stat-item {
+              width: 50%;
+            }
+            .range-selector {
+                gap: 4px;
+            }
+            .range-btn {
+                padding: 6px 12px;
+                font-size: 0.75rem;
+            }
+            .custom-range {
+                flex-direction: column;
+                gap: 6px;
+                border-radius: 30px;
+                padding: 12px;
+            }
+            .custom-range input[type="date"] {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -206,6 +347,38 @@
     <div class="person-buttons">
         <button id="tanyaButton" class="person-btn active">🎀 Танюшка</button>
         <button id="katyaButton" class="person-btn">🌸 Катюшка</button>
+    </div>
+
+    <!-- Выбор диапазона -->
+    <div class="range-selector" id="rangeSelector">
+        <button class="range-btn" data-range="week">📅 Неделя</button>
+        <button class="range-btn" data-range="month">📅 Месяц</button>
+        <button class="range-btn active" data-range="all">📅 Всё время</button>
+        <button class="range-btn" data-range="custom">📅 Свои даты</button>
+    </div>
+
+    <!-- Пользовательский выбор дат -->
+    <div class="custom-range" id="customRange" style="display:none;">
+        <label>от</label>
+        <input type="date" id="dateFrom">
+        <label>до</label>
+        <input type="date" id="dateTo">
+        <button class="apply-btn" id="applyCustomRange">Применить</button>
+    </div>
+
+   
+
+    <!-- Блок общей динамики -->
+    <div class="total-stats" id="totalStats">
+        <div class="stat-item">
+            
+            <div class="value" id="tanyaTotalDiff">0.0 кг</div>
+            <div class="sub-text">изменение за период</div>
+        </div>
+        <div class="stat-item">
+            <div class="value" id="katyaTotalDiff">0.0 кг</div>
+            <div class="sub-text">изменение за период</div>
+        </div>
     </div>
 
     <div class="weight-card">
@@ -244,20 +417,22 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     // ====================== НАСТРОЙКИ SUPABASE ======================
-    // ⬇️ ЗАМЕНИТЕ НА ВАШИ ДАННЫЕ (из Settings → API вашего проекта) ⬇️
     const SUPABASE_URL = "https://dumititxmlefeldvmvmg.supabase.co";
-    const SUPABASE_ANON = "sb_publishable_WOtfNa5PZ5Cyb-zg5WUgwg_hagk9wX7";;
-    // ⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️
+    const SUPABASE_ANON = "sb_publishable_WOtfNa5PZ5Cyb-zg5WUgwg_hagk9wX7";
+    // ================================================================
 
-    // Глобальные переменные
     let supabaseClient;
-    let currentPerson = "tanya"; // "tanya" или "katya"
+    let currentPerson = "tanya";
     let currentDate = new Date().toISOString().slice(0, 10);
+    let currentRange = "all"; // 'week', 'month', 'all', 'custom'
+    let customFrom = null;
+    let customTo = null;
 
     // DOM элементы
     let tanyaBtn, katyaBtn, selectedDisplay, weightInput, dateInput, todayBtn, saveBtn, resetBtn, historyBody, statusDiv;
+    let tanyaTotalDiff, katyaTotalDiff;
+    let rangeBtns, customRangeDiv, dateFrom, dateTo, applyCustomBtn, rangeInfo;
 
-    // Инициализация после загрузки DOM
     document.addEventListener('DOMContentLoaded', async () => {
         // Получаем все элементы
         tanyaBtn = document.getElementById('tanyaButton');
@@ -270,6 +445,21 @@
         resetBtn = document.getElementById('resetAllButton');
         historyBody = document.getElementById('historyTableBody');
         statusDiv = document.getElementById('statusMessage');
+        tanyaTotalDiff = document.getElementById('tanyaTotalDiff');
+        katyaTotalDiff = document.getElementById('katyaTotalDiff');
+        rangeBtns = document.querySelectorAll('.range-btn');
+        customRangeDiv = document.getElementById('customRange');
+        dateFrom = document.getElementById('dateFrom');
+        dateTo = document.getElementById('dateTo');
+        applyCustomBtn = document.getElementById('applyCustomRange');
+        rangeInfo = document.getElementById('rangeInfo');
+
+        // Устанавливаем даты по умолчанию для custom диапазона
+        const today = new Date();
+        const monthAgo = new Date(today);
+        monthAgo.setDate(today.getDate() - 30);
+        dateFrom.value = monthAgo.toISOString().slice(0, 10);
+        dateTo.value = today.toISOString().slice(0, 10);
 
         // Устанавливаем дату
         dateInput.value = currentDate;
@@ -290,6 +480,42 @@
             console.log("Переключено на Катюшку");
         };
 
+        // Обработчики выбора диапазона
+        rangeBtns.forEach(btn => {
+            btn.onclick = () => {
+                rangeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentRange = btn.dataset.range;
+                
+                // Показываем/скрываем custom поля
+                if (currentRange === 'custom') {
+                    customRangeDiv.style.display = 'flex';
+                    // Если custom уже был выбран, используем его
+                    if (customFrom && customTo) {
+                        loadData();
+                    }
+                } else {
+                    customRangeDiv.style.display = 'none';
+                    loadData();
+                }
+            };
+        });
+
+        // Применение custom диапазона
+        applyCustomBtn.onclick = () => {
+            customFrom = dateFrom.value;
+            customTo = dateTo.value;
+            if (!customFrom || !customTo) {
+                alert('Выберите обе даты');
+                return;
+            }
+            if (customFrom > customTo) {
+                alert('Дата "от" не может быть позже даты "до"');
+                return;
+            }
+            loadData();
+        };
+
         // Обработчики даты
         dateInput.onchange = () => { currentDate = dateInput.value; };
         todayBtn.onclick = () => {
@@ -301,7 +527,6 @@
         // Подключаем Supabase
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
         
-        // Проверяем подключение
         const { error: testError } = await supabaseClient.from('weight_records').select('id', { count: 'exact', head: true });
         if (testError) {
             statusDiv.innerHTML = `❌ Ошибка подключения: ${testError.message}. Проверьте URL и anon key.`;
@@ -311,56 +536,145 @@
         statusDiv.innerHTML = "✅ Подключено к Supabase";
         statusDiv.style.background = "#e6f4ea";
 
-        // Загружаем данные
         await loadData();
 
-        // Кнопки действий
         saveBtn.onclick = saveWeight;
         resetBtn.onclick = resetAllData;
     });
 
-    // Загрузка всех записей и отрисовка таблицы
+    // Получение даты начала диапазона
+    function getRangeStartDate() {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        if (currentRange === 'week') {
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - 7);
+            return weekStart.toISOString().slice(0, 10);
+        } else if (currentRange === 'month') {
+            const monthStart = new Date(today);
+            monthStart.setMonth(today.getMonth() - 1);
+            return monthStart.toISOString().slice(0, 10);
+        } else if (currentRange === 'custom' && customFrom) {
+            return customFrom;
+        }
+        return '1970-01-01'; // 'all' - с самого начала
+    }
+
+    function getRangeEndDate() {
+        if (currentRange === 'custom' && customTo) {
+            return customTo;
+        }
+        return new Date().toISOString().slice(0, 10);
+    }
+
+    function updateRangeInfo() {
+        const start = getRangeStartDate();
+        const end = getRangeEndDate();
+        if (currentRange === 'all') {
+            rangeInfo.textContent = '📊 Показаны все записи';
+        } else if (currentRange === 'week') {
+            rangeInfo.textContent = `📊 Последние 7 дней (с ${start})`;
+        } else if (currentRange === 'month') {
+            rangeInfo.textContent = `📊 Последний месяц (с ${start})`;
+        } else if (currentRange === 'custom') {
+            rangeInfo.textContent = `📊 Период: ${start} — ${end}`;
+        }
+    }
+
+    function updateTotalStats(tanyaAll, katyaAll) {
+        const rangeStart = getRangeStartDate();
+        const rangeEnd = getRangeEndDate();
+        
+        // Фильтруем по диапазону
+        const tanyaFiltered = tanyaAll.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
+        const katyaFiltered = katyaAll.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
+
+        // Танюшка
+        if (tanyaFiltered.length > 1) {
+            const first = tanyaFiltered[0].weight;
+            const last = tanyaFiltered[tanyaFiltered.length - 1].weight;
+            const diff = last - first;
+            const diffAbs = Math.abs(diff).toFixed(1);
+            const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
+            tanyaTotalDiff.textContent = `${sign}${diffAbs} кг`;
+            tanyaTotalDiff.className = 'value' + (diff > 0 ? ' positive' : (diff < 0 ? ' negative' : ' zero'));
+        } else if (tanyaFiltered.length === 1) {
+            tanyaTotalDiff.textContent = '0.0 кг';
+            tanyaTotalDiff.className = 'value zero';
+        } else {
+            tanyaTotalDiff.textContent = '—';
+            tanyaTotalDiff.className = 'value zero';
+        }
+
+        // Катюшка
+        if (katyaFiltered.length > 1) {
+            const first = katyaFiltered[0].weight;
+            const last = katyaFiltered[katyaFiltered.length - 1].weight;
+            const diff = last - first;
+            const diffAbs = Math.abs(diff).toFixed(1);
+            const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
+            katyaTotalDiff.textContent = `${sign}${diffAbs} кг`;
+            katyaTotalDiff.className = 'value' + (diff > 0 ? ' positive' : (diff < 0 ? ' negative' : ' zero'));
+        } else if (katyaFiltered.length === 1) {
+            katyaTotalDiff.textContent = '0.0 кг';
+            katyaTotalDiff.className = 'value zero';
+        } else {
+            katyaTotalDiff.textContent = '—';
+            katyaTotalDiff.className = 'value zero';
+        }
+    }
+
     async function loadData() {
         try {
+            updateRangeInfo();
+
             const { data, error } = await supabaseClient
                 .from('weight_records')
                 .select('*')
                 .order('date', { ascending: false });
             if (error) throw error;
 
-            if (!data || data.length === 0) {
-                historyBody.innerHTML = '<tr><td colspan="4" class="empty">📭 Нет записей. Добавьте первую!</td></tr>';
+            const { data: tanyaAll } = await supabaseClient.from('weight_records').select('*').eq('person', 'tanya').order('date', { ascending: true });
+            const { data: katyaAll } = await supabaseClient.from('weight_records').select('*').eq('person', 'katya').order('date', { ascending: true });
+            
+            updateTotalStats(tanyaAll, katyaAll);
+
+            // Фильтруем данные для таблицы по диапазону
+            const rangeStart = getRangeStartDate();
+            const rangeEnd = getRangeEndDate();
+            const filteredData = data.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
+
+            if (!filteredData || filteredData.length === 0) {
+                historyBody.innerHTML = '<tr><td colspan="4" class="empty">📭 Нет записей за выбранный период</td></tr>';
                 return;
             }
 
-            // Группируем по датам
             const byDate = new Map();
-            for (let rec of data) {
+            for (let rec of filteredData) {
                 if (!byDate.has(rec.date)) byDate.set(rec.date, { tanya: null, katya: null });
                 byDate.get(rec.date)[rec.person] = rec;
             }
 
-            // Получаем все даты, сортируем от новых к старым
             const dates = Array.from(byDate.keys()).sort((a,b) => b.localeCompare(a));
             
-            // Для вычисления изменений нужно знать предыдущие веса для каждой персоны
-            // Сначала получим все записи по каждой персоне в порядке возрастания
-            const { data: tanyaAll } = await supabaseClient.from('weight_records').select('*').eq('person', 'tanya').order('date', { ascending: true });
-            const { data: katyaAll } = await supabaseClient.from('weight_records').select('*').eq('person', 'katya').order('date', { ascending: true });
-            
-            const tanyaChanges = new Map(); // date -> изменение
+            const tanyaChanges = new Map();
             const katyaChanges = new Map();
             
-            for (let i = 0; i < tanyaAll.length; i++) {
+            // Фильтруем для изменений только в рамках диапазона
+            const tanyaRange = tanyaAll.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
+            const katyaRange = katyaAll.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
+            
+            for (let i = 0; i < tanyaRange.length; i++) {
                 if (i > 0) {
-                    const diff = tanyaAll[i].weight - tanyaAll[i-1].weight;
-                    tanyaChanges.set(tanyaAll[i].date, diff);
+                    const diff = tanyaRange[i].weight - tanyaRange[i-1].weight;
+                    tanyaChanges.set(tanyaRange[i].date, diff);
                 }
             }
-            for (let i = 0; i < katyaAll.length; i++) {
+            for (let i = 0; i < katyaRange.length; i++) {
                 if (i > 0) {
-                    const diff = katyaAll[i].weight - katyaAll[i-1].weight;
-                    katyaChanges.set(katyaAll[i].date, diff);
+                    const diff = katyaRange[i].weight - katyaRange[i-1].weight;
+                    katyaChanges.set(katyaRange[i].date, diff);
                 }
             }
 
@@ -376,7 +690,6 @@
                     if (change !== undefined) {
                         const changeAbs = Math.abs(change).toFixed(1);
                         const arrow = change > 0 ? '▲' : (change < 0 ? '▼' : '●');
-                        const bgClass = change > 0 ? 'change-positive' : (change < 0 ? 'change-negative' : 'change-neutral');
                         changeHtml = `<div style="font-size:0.7rem; margin-top:4px; background:${change > 0 ? '#fce4e4' : (change < 0 ? '#e6f4ea' : '#fff0f0')}; color:${change > 0 ? '#c62828' : (change < 0 ? '#2e7d32' : '#b86b82')}; border-radius:20px; padding:2px 6px;">${arrow} ${changeAbs} кг</div>`;
                     } else {
                         changeHtml = `<div style="font-size:0.7rem; margin-top:4px; background:#fff0f0; border-radius:20px; padding:2px 6px;">● первое</div>`;
@@ -407,7 +720,6 @@
             }
             historyBody.innerHTML = html;
             
-            // Навесить удаление на кнопки
             document.querySelectorAll('.delete').forEach(btn => {
                 btn.onclick = async (e) => {
                     e.stopPropagation();
@@ -426,7 +738,6 @@
         }
     }
 
-    // Сохранение веса
     async function saveWeight() {
         const weight = parseFloat(weightInput.value);
         if (isNaN(weight) || weight <= 0 || weight > 300) {
@@ -439,7 +750,6 @@
             return;
         }
         
-        // Проверим, есть ли запись на эту дату для этой персоны
         const { data: existing, error: checkErr } = await supabaseClient
             .from('weight_records')
             .select('id')
@@ -452,7 +762,7 @@
             return;
         }
         
-        if (existing && !confirm(`Запись на ${date} для ${currentPerson === 'tanya' ? 'Танюшки' : 'Катюшки'} уже есть (${existing.weight} кг). Заменить?`)) {
+        if (existing && !confirm(`Запись на ${date} для ${currentPerson === 'tanya' ? 'Танюшки' : 'Катюшки'} уже есть. Заменить?`)) {
             return;
         }
         
@@ -474,7 +784,6 @@
         alert('✅ Вес сохранён');
     }
 
-    // Сброс всех данных
     async function resetAllData() {
         if (!confirm('Удалить ВСЕ записи о весе? Отменить нельзя.')) return;
         const { error } = await supabaseClient.from('weight_records').delete().neq('id', 0);
