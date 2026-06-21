@@ -316,9 +316,11 @@
         }
 
         @media (max-width: 480px) {
-           
+            .total-stats {
+                flex-direction: column;
+            }
             .stat-item {
-              width: 50%;
+                min-width: unset;
             }
             .range-selector {
                 gap: 4px;
@@ -366,16 +368,17 @@
         <button class="apply-btn" id="applyCustomRange">Применить</button>
     </div>
 
-   
+    <div class="range-info" id="rangeInfo">📊 Показаны все записи</div>
 
     <!-- Блок общей динамики -->
     <div class="total-stats" id="totalStats">
         <div class="stat-item">
-            
+            <div class="name">🎀 Танюшка</div>
             <div class="value" id="tanyaTotalDiff">0.0 кг</div>
             <div class="sub-text">изменение за период</div>
         </div>
         <div class="stat-item">
+            <div class="name">🌸 Катюшка</div>
             <div class="value" id="katyaTotalDiff">0.0 кг</div>
             <div class="sub-text">изменение за период</div>
         </div>
