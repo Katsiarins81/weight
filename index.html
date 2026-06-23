@@ -625,7 +625,7 @@
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         if (currentRange === 'week') {
             const weekStart = new Date(today);
-            weekStart.setDate(today.getDate() - 7);
+            weekStart.setDate(today.getDate() - 6);
             return weekStart.toISOString().slice(0, 10);
         } else if (currentRange === 'month') {
             const monthStart = new Date(today);
