@@ -79,7 +79,6 @@
             color: white;
         }
 
-        /* Блок общей динамики */
         .total-stats {
             display: flex;
             gap: 16px;
@@ -121,7 +120,6 @@
             margin-top: 2px;
         }
 
-        /* Выбор диапазона */
         .range-selector {
             display: flex;
             gap: 8px;
@@ -152,7 +150,6 @@
             background: #ff8aab;
         }
 
-        /* Пользовательский выбор дат */
         .custom-range {
             display: flex;
             gap: 12px;
@@ -277,6 +274,19 @@
             text-decoration: underline;
             cursor: pointer;
         }
+        .chart-btn {
+            background: #ff94b0;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .chart-btn:hover {
+            background: #e86b8b;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -315,6 +325,47 @@
             margin-bottom: 12px;
         }
 
+        /* Модальное окно для графика */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 40px;
+            padding: 24px;
+            max-width: 800px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 20px;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #e68eaa;
+            background: none;
+            border: none;
+        }
+        .modal-close:hover {
+            color: #c94f70;
+        }
+        .chart-container {
+            width: 100%;
+            height: 400px;
+        }
+
         @media (max-width: 480px) {
            
             .stat-item {
@@ -336,6 +387,12 @@
             .custom-range input[type="date"] {
                 width: 100%;
             }
+            .modal-content {
+                padding: 16px;
+            }
+            .chart-container {
+                height: 300px;
+            }
         }
     </style>
 </head>
@@ -349,7 +406,6 @@
         <button id="katyaButton" class="person-btn">🌸 Катюшка</button>
     </div>
 
-    <!-- Выбор диапазона -->
     <div class="range-selector" id="rangeSelector">
         <button class="range-btn" data-range="week">📅 Неделя</button>
         <button class="range-btn" data-range="month">📅 Месяц</button>
@@ -357,7 +413,6 @@
         <button class="range-btn" data-range="custom">📅 Свои даты</button>
     </div>
 
-    <!-- Пользовательский выбор дат -->
     <div class="custom-range" id="customRange" style="display:none;">
         <label>от</label>
         <input type="date" id="dateFrom">
@@ -368,17 +423,16 @@
 
     <div class="range-info" id="rangeInfo">📊 Показаны все записи</div>
 
-    <!-- Блок общей динамики -->
     <div class="total-stats" id="totalStats">
         <div class="stat-item">
             <div class="name">🎀 Танюшка</div>
             <div class="value" id="tanyaTotalDiff">0.0 кг</div>
-            <div class="sub-text">изменение за период</div>
+            <div class="sub-text" id="tanyaDays">за 0 дн</div>
         </div>
         <div class="stat-item">
             <div class="name">🌸 Катюшка</div>
             <div class="value" id="katyaTotalDiff">0.0 кг</div>
-            <div class="sub-text">изменение за период</div>
+            <div class="sub-text" id="katyaDays">за 0 дн</div>
         </div>
     </div>
 
@@ -399,7 +453,10 @@
     <div class="history-section">
         <div class="history-header">
             <h3> История изменений</h3>
-            <button id="resetAllButton" class="reset-btn">Очистить всё</button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button id="chartButton" class="chart-btn">📈 График</button>
+                <button id="resetAllButton" class="reset-btn">Очистить всё</button>
+            </div>
         </div>
         <div style="overflow-x: auto;">
             <table>
@@ -412,10 +469,22 @@
             </table>
         </div>
     </div>
-   
+</div>
+
+<!-- Модальное окно для графика -->
+<div class="modal" id="chartModal">
+    <div class="modal-content">
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+        <h2 style="text-align:center; color:#bc5f7a; margin-bottom:16px;">Динамика веса</h2>
+        <div class="chart-container">
+            <canvas id="weightChart"></canvas>
+        </div>
+        <p style="text-align:center; font-size:0.7rem; color:#e6a1b7; margin-top:12px;">* График построен на основе выбранного диапазона</p>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // ====================== НАСТРОЙКИ SUPABASE ======================
     const SUPABASE_URL = "https://dumititxmlefeldvmvmg.supabase.co";
@@ -425,17 +494,17 @@
     let supabaseClient;
     let currentPerson = "tanya";
     let currentDate = new Date().toISOString().slice(0, 10);
-    let currentRange = "all"; // 'week', 'month', 'all', 'custom'
+    let currentRange = "all";
     let customFrom = null;
     let customTo = null;
 
     // DOM элементы
     let tanyaBtn, katyaBtn, selectedDisplay, weightInput, dateInput, todayBtn, saveBtn, resetBtn, historyBody, statusDiv;
-    let tanyaTotalDiff, katyaTotalDiff;
+    let tanyaTotalDiff, katyaTotalDiff, tanyaDays, katyaDays;
     let rangeBtns, customRangeDiv, dateFrom, dateTo, applyCustomBtn, rangeInfo;
+    let chartButton, modal, closeModalBtn, chartCanvas, chartInstance = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
-        // Получаем все элементы
         tanyaBtn = document.getElementById('tanyaButton');
         katyaBtn = document.getElementById('katyaButton');
         selectedDisplay = document.getElementById('selectedPersonDisplay');
@@ -448,53 +517,48 @@
         statusDiv = document.getElementById('statusMessage');
         tanyaTotalDiff = document.getElementById('tanyaTotalDiff');
         katyaTotalDiff = document.getElementById('katyaTotalDiff');
+        tanyaDays = document.getElementById('tanyaDays');
+        katyaDays = document.getElementById('katyaDays');
         rangeBtns = document.querySelectorAll('.range-btn');
         customRangeDiv = document.getElementById('customRange');
         dateFrom = document.getElementById('dateFrom');
         dateTo = document.getElementById('dateTo');
         applyCustomBtn = document.getElementById('applyCustomRange');
         rangeInfo = document.getElementById('rangeInfo');
+        chartButton = document.getElementById('chartButton');
+        modal = document.getElementById('chartModal');
+        closeModalBtn = document.getElementById('closeModalBtn');
+        chartCanvas = document.getElementById('weightChart');
 
-        // Устанавливаем даты по умолчанию для custom диапазона
         const today = new Date();
         const monthAgo = new Date(today);
         monthAgo.setDate(today.getDate() - 30);
         dateFrom.value = monthAgo.toISOString().slice(0, 10);
         dateTo.value = today.toISOString().slice(0, 10);
 
-        // Устанавливаем дату
         dateInput.value = currentDate;
 
-        // Навешиваем обработчики переключения персоны
         tanyaBtn.onclick = () => {
             currentPerson = "tanya";
             tanyaBtn.classList.add('active');
             katyaBtn.classList.remove('active');
             selectedDisplay.innerHTML = '🎀 Танюшка';
-            console.log("Переключено на Танюшку");
         };
         katyaBtn.onclick = () => {
             currentPerson = "katya";
             katyaBtn.classList.add('active');
             tanyaBtn.classList.remove('active');
             selectedDisplay.innerHTML = '🌸 Катюшка';
-            console.log("Переключено на Катюшку");
         };
 
-        // Обработчики выбора диапазона
         rangeBtns.forEach(btn => {
             btn.onclick = () => {
                 rangeBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentRange = btn.dataset.range;
-                
-                // Показываем/скрываем custom поля
                 if (currentRange === 'custom') {
                     customRangeDiv.style.display = 'flex';
-                    // Если custom уже был выбран, используем его
-                    if (customFrom && customTo) {
-                        loadData();
-                    }
+                    if (customFrom && customTo) loadData();
                 } else {
                     customRangeDiv.style.display = 'none';
                     loadData();
@@ -502,22 +566,14 @@
             };
         });
 
-        // Применение custom диапазона
         applyCustomBtn.onclick = () => {
             customFrom = dateFrom.value;
             customTo = dateTo.value;
-            if (!customFrom || !customTo) {
-                alert('Выберите обе даты');
-                return;
-            }
-            if (customFrom > customTo) {
-                alert('Дата "от" не может быть позже даты "до"');
-                return;
-            }
+            if (!customFrom || !customTo) { alert('Выберите обе даты'); return; }
+            if (customFrom > customTo) { alert('Дата "от" не может быть позже даты "до"'); return; }
             loadData();
         };
 
-        // Обработчики даты
         dateInput.onchange = () => { currentDate = dateInput.value; };
         todayBtn.onclick = () => {
             const today = new Date().toISOString().slice(0,10);
@@ -525,12 +581,34 @@
             dateInput.value = today;
         };
 
-        // Подключаем Supabase
+        // Кнопка графика
+        chartButton.onclick = () => {
+            modal.style.display = 'flex';
+            buildChart();
+        };
+
+        // Закрытие модального окна
+        closeModalBtn.onclick = () => {
+            modal.style.display = 'none';
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+        };
+        window.onclick = (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                if (chartInstance) {
+                    chartInstance.destroy();
+                    chartInstance = null;
+                }
+            }
+        };
+
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-        
         const { error: testError } = await supabaseClient.from('weight_records').select('id', { count: 'exact', head: true });
         if (testError) {
-            statusDiv.innerHTML = `❌ Ошибка подключения: ${testError.message}. Проверьте URL и anon key.`;
+            statusDiv.innerHTML = `❌ Ошибка подключения: ${testError.message}`;
             statusDiv.style.background = "#fce4e4";
             return;
         }
@@ -538,16 +616,13 @@
         statusDiv.style.background = "#e6f4ea";
 
         await loadData();
-
         saveBtn.onclick = saveWeight;
         resetBtn.onclick = resetAllData;
     });
 
-    // Получение даты начала диапазона
     function getRangeStartDate() {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
         if (currentRange === 'week') {
             const weekStart = new Date(today);
             weekStart.setDate(today.getDate() - 7);
@@ -559,7 +634,7 @@
         } else if (currentRange === 'custom' && customFrom) {
             return customFrom;
         }
-        return '1970-01-01'; // 'all' - с самого начала
+        return '1970-01-01';
     }
 
     function getRangeEndDate() {
@@ -572,34 +647,39 @@
     function updateRangeInfo() {
         const start = getRangeStartDate();
         const end = getRangeEndDate();
-        if (currentRange === 'all') {
-            rangeInfo.textContent = '📊 Показаны все записи';
-        } else if (currentRange === 'week') {
-            rangeInfo.textContent = `📊 Последние 7 дней (с ${start})`;
-        } else if (currentRange === 'month') {
-            rangeInfo.textContent = `📊 Последний месяц (с ${start})`;
-        } else if (currentRange === 'custom') {
-            rangeInfo.textContent = `📊 Период: ${start} — ${end}`;
-        }
+        if (currentRange === 'all') rangeInfo.textContent = '📊 Показаны все записи';
+        else if (currentRange === 'week') rangeInfo.textContent = `📊 Последние 7 дней (с ${start})`;
+        else if (currentRange === 'month') rangeInfo.textContent = `📊 Последний месяц (с ${start})`;
+        else if (currentRange === 'custom') rangeInfo.textContent = `📊 Период: ${start} — ${end}`;
     }
 
     function updateTotalStats(tanyaAll, katyaAll) {
         const rangeStart = getRangeStartDate();
         const rangeEnd = getRangeEndDate();
-        
-        // Фильтруем по диапазону
         const tanyaFiltered = tanyaAll.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
         const katyaFiltered = katyaAll.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
 
+        function getDays(entries) {
+            if (entries.length < 2) return 0;
+            const first = entries[0];
+            const last = entries[entries.length - 1];
+            return Math.floor((new Date(last.date) - new Date(first.date)) / (1000 * 60 * 60 * 24));
+        }
+
+        function getDiff(entries) {
+            if (entries.length < 2) return null;
+            const first = entries[0];
+            const last = entries[entries.length - 1];
+            return last.weight - first.weight;
+        }
+
         // Танюшка
-        if (tanyaFiltered.length > 1) {
-            const first = tanyaFiltered[0].weight;
-            const last = tanyaFiltered[tanyaFiltered.length - 1].weight;
-            const diff = last - first;
-            const diffAbs = Math.abs(diff).toFixed(1);
-            const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
-            tanyaTotalDiff.textContent = `${sign}${diffAbs} кг`;
-            tanyaTotalDiff.className = 'value' + (diff > 0 ? ' positive' : (diff < 0 ? ' negative' : ' zero'));
+        const tanyaDiff = getDiff(tanyaFiltered);
+        const tanyaDaysCount = getDays(tanyaFiltered);
+        if (tanyaDiff !== null) {
+            const sign = tanyaDiff > 0 ? '+' : (tanyaDiff < 0 ? '-' : '');
+            tanyaTotalDiff.textContent = `${sign}${Math.abs(tanyaDiff).toFixed(1)} кг`;
+            tanyaTotalDiff.className = 'value ' + (tanyaDiff > 0 ? 'positive' : (tanyaDiff < 0 ? 'negative' : 'zero'));
         } else if (tanyaFiltered.length === 1) {
             tanyaTotalDiff.textContent = '0.0 кг';
             tanyaTotalDiff.className = 'value zero';
@@ -607,16 +687,15 @@
             tanyaTotalDiff.textContent = '—';
             tanyaTotalDiff.className = 'value zero';
         }
+        tanyaDays.textContent = tanyaFiltered.length >= 2 ? `за ${tanyaDaysCount} дн` : (tanyaFiltered.length === 1 ? 'за 0 дн' : 'нет данных');
 
         // Катюшка
-        if (katyaFiltered.length > 1) {
-            const first = katyaFiltered[0].weight;
-            const last = katyaFiltered[katyaFiltered.length - 1].weight;
-            const diff = last - first;
-            const diffAbs = Math.abs(diff).toFixed(1);
-            const sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
-            katyaTotalDiff.textContent = `${sign}${diffAbs} кг`;
-            katyaTotalDiff.className = 'value' + (diff > 0 ? ' positive' : (diff < 0 ? ' negative' : ' zero'));
+        const katyaDiff = getDiff(katyaFiltered);
+        const katyaDaysCount = getDays(katyaFiltered);
+        if (katyaDiff !== null) {
+            const sign = katyaDiff > 0 ? '+' : (katyaDiff < 0 ? '-' : '');
+            katyaTotalDiff.textContent = `${sign}${Math.abs(katyaDiff).toFixed(1)} кг`;
+            katyaTotalDiff.className = 'value ' + (katyaDiff > 0 ? 'positive' : (katyaDiff < 0 ? 'negative' : 'zero'));
         } else if (katyaFiltered.length === 1) {
             katyaTotalDiff.textContent = '0.0 кг';
             katyaTotalDiff.className = 'value zero';
@@ -624,12 +703,127 @@
             katyaTotalDiff.textContent = '—';
             katyaTotalDiff.className = 'value zero';
         }
+        katyaDays.textContent = katyaFiltered.length >= 2 ? `за ${katyaDaysCount} дн` : (katyaFiltered.length === 1 ? 'за 0 дн' : 'нет данных');
+    }
+
+    // Функция для построения графика
+    function buildChart() {
+        // Получаем актуальные данные из таблицы (используем уже загруженные, но для надёжности перезапросим)
+        // Так как loadData уже вызвана, мы можем использовать глобальные переменные, но проще запросить заново с фильтром.
+        // Для простоты используем данные, которые уже загружены в loadData через переменные, но их нет в глобальной области.
+        // Поэтому перезапросим данные специально для графика.
+        (async () => {
+            const rangeStart = getRangeStartDate();
+            const rangeEnd = getRangeEndDate();
+            const { data: allData, error } = await supabaseClient
+                .from('weight_records')
+                .select('*')
+                .gte('date', rangeStart)
+                .lte('date', rangeEnd)
+                .order('date', { ascending: true });
+            if (error) {
+                alert('Ошибка загрузки данных для графика: ' + error.message);
+                return;
+            }
+            // Разделим по персонам
+            const tanyaData = allData.filter(r => r.person === 'tanya');
+            const katyaData = allData.filter(r => r.person === 'katya');
+
+            // Подготовим данные для Chart.js
+            // Объединяем все даты из обеих серий (уникальные)
+            const datesSet = new Set();
+            tanyaData.forEach(r => datesSet.add(r.date));
+            katyaData.forEach(r => datesSet.add(r.date));
+            const sortedDates = Array.from(datesSet).sort((a,b) => a.localeCompare(b));
+
+            // Сопоставляем вес по датам
+            const tanyaMap = new Map(tanyaData.map(r => [r.date, r.weight]));
+            const katyaMap = new Map(katyaData.map(r => [r.date, r.weight]));
+
+            const tanyaWeights = sortedDates.map(d => tanyaMap.has(d) ? tanyaMap.get(d) : null);
+            const katyaWeights = sortedDates.map(d => katyaMap.has(d) ? katyaMap.get(d) : null);
+
+            // Уничтожаем старый график, если есть
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+
+            const ctx = chartCanvas.getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: [
+                        {
+                            label: 'Танюшка',
+                            data: tanyaWeights,
+                            borderColor: '#e86b8b',
+                            backgroundColor: 'rgba(232, 107, 139, 0.1)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#e86b8b',
+                            tension: 0.1,
+                            spanGaps: true,
+                        },
+                        {
+                            label: 'Катюшка',
+                            data: katyaWeights,
+                            borderColor: '#4a9eff',
+                            backgroundColor: 'rgba(74, 158, 255, 0.1)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#4a9eff',
+                            tension: 0.1,
+                            spanGaps: true,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { size: 14 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (context.parsed.y !== null) {
+                                        label += ': ' + context.parsed.y.toFixed(1) + ' кг';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 20
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) { return value + ' кг'; }
+                            }
+                        }
+                    }
+                }
+            });
+        })();
     }
 
     async function loadData() {
         try {
             updateRangeInfo();
-
             const { data, error } = await supabaseClient
                 .from('weight_records')
                 .select('*')
@@ -638,10 +832,8 @@
 
             const { data: tanyaAll } = await supabaseClient.from('weight_records').select('*').eq('person', 'tanya').order('date', { ascending: true });
             const { data: katyaAll } = await supabaseClient.from('weight_records').select('*').eq('person', 'katya').order('date', { ascending: true });
-            
             updateTotalStats(tanyaAll, katyaAll);
 
-            // Фильтруем данные для таблицы по диапазону
             const rangeStart = getRangeStartDate();
             const rangeEnd = getRangeEndDate();
             const filteredData = data.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
@@ -656,16 +848,11 @@
                 if (!byDate.has(rec.date)) byDate.set(rec.date, { tanya: null, katya: null });
                 byDate.get(rec.date)[rec.person] = rec;
             }
-
             const dates = Array.from(byDate.keys()).sort((a,b) => b.localeCompare(a));
-            
-            const tanyaChanges = new Map();
-            const katyaChanges = new Map();
-            
-            // Фильтруем для изменений только в рамках диапазона
             const tanyaRange = tanyaAll.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
             const katyaRange = katyaAll.filter(r => r.date >= rangeStart && r.date <= rangeEnd);
-            
+            const tanyaChanges = new Map();
+            const katyaChanges = new Map();
             for (let i = 0; i < tanyaRange.length; i++) {
                 if (i > 0) {
                     const diff = tanyaRange[i].weight - tanyaRange[i-1].weight;
@@ -683,7 +870,6 @@
             for (let date of dates) {
                 const tanyaRec = byDate.get(date).tanya;
                 const katyaRec = byDate.get(date).katya;
-                
                 let tanyaHtml = '';
                 if (tanyaRec) {
                     const change = tanyaChanges.get(date);
@@ -699,7 +885,6 @@
                 } else {
                     tanyaHtml = '—';
                 }
-                
                 let katyaHtml = '';
                 if (katyaRec) {
                     const change = katyaChanges.get(date);
@@ -715,12 +900,11 @@
                 } else {
                     katyaHtml = '—';
                 }
-                
                 const delBtn = `<button class="delete" data-date="${date}" data-tanya-id="${tanyaRec ? tanyaRec.id : ''}" data-katya-id="${katyaRec ? katyaRec.id : ''}">✕</button>`;
                 html += `<tr><td>${date}</td><td>${tanyaHtml}</td><td>${katyaHtml}</td><td>${delBtn}</td></tr>`;
             }
             historyBody.innerHTML = html;
-            
+
             document.querySelectorAll('.delete').forEach(btn => {
                 btn.onclick = async (e) => {
                     e.stopPropagation();
@@ -750,36 +934,29 @@
             alert('Выберите дату');
             return;
         }
-        
         const { data: existing, error: checkErr } = await supabaseClient
             .from('weight_records')
             .select('id')
             .eq('person', currentPerson)
             .eq('date', date)
             .maybeSingle();
-        
         if (checkErr) {
             alert('Ошибка проверки: ' + checkErr.message);
             return;
         }
-        
         if (existing && !confirm(`Запись на ${date} для ${currentPerson === 'tanya' ? 'Танюшки' : 'Катюшки'} уже есть. Заменить?`)) {
             return;
         }
-        
         if (existing) {
             await supabaseClient.from('weight_records').delete().eq('id', existing.id);
         }
-        
         const { error: insertErr } = await supabaseClient
             .from('weight_records')
             .insert([{ person: currentPerson, date: date, weight: weight }]);
-        
         if (insertErr) {
             alert('Ошибка сохранения: ' + insertErr.message);
             return;
         }
-        
         weightInput.value = '';
         await loadData();
         alert('✅ Вес сохранён');
